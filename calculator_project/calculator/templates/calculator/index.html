@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Calculator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .card {
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 300px;
+        }
+
+        h2, h3, h4 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-weight: bold;
+            margin-top: 15px;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            background: #ecf9ec;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        .popup {
+            background: #d4edda;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            text-align: center;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .confirm-buttons button {
+            width: 48%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        table th, table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+        }
+
+        table th {
+            background: #f9f9f9;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .card {
+                width: 90%;
+            }
+
+            table th, table td {
+                font-size: 13px;
+            }
+
+            button {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="card">
+        <h2><i class="fas fa-calculator"></i> Smart Calculator</h2>
+        <form method="post">
+            {% csrf_token %}
+            <input type="text" name="num1" placeholder="Enter first number" required>
+            <input type="text" name="num2" placeholder="Enter second number" required>
+            <select name="operator" required>
+                <option value="">-- Select Operation --</option>
+                <option value="+">Addition (+)</option>
+                <option value="-">Subtraction (-)</option>
+                <option value="*">Multiplication (*)</option>
+                <option value="/">Division (/)</option>
+            </select>
+            <button type="submit" name="calculate"><i class="fas fa-equals"></i> Calculate</button>
+        </form>
+
+        {% if result != '' %}
+            <div class="result-box">Result: {{ result }}</div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3><i class="fas fa-history"></i> History & Filters</h3>
+
+        {% if popup_message %}
+            <div class="popup">{{ popup_message }}</div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <select name="filter_option" required>
+                <option value="today">Today</option>
+                <option value="last_10_days">Last 10 Days</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+            </select>
+            <button type="submit" name="filter"><i class="fas fa-filter"></i> Apply Filter</button>
+        </form>
+
+        <h4>Calculation History</h4>
+        {% if history %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Num1</th>
+                        <th>Op</th>
+                        <th>Num2</th>
+                        <th>Result</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in history %}
+                        <tr>
+                            <td>{{ item.num1 }}</td>
+                            <td>{{ item.operator }}</td>
+                            <td>{{ item.num2 }}</td>
+                            <td>{{ item.result }}</td>
+                            <td>{{ item.created_at|date:"d M, H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No history found.</p>
+        {% endif %}
+
+        <form method="post" style="margin-top: 20px;">
+            {% csrf_token %}
+
+            {% if confirm_clear %}
+                {% if ask_password %}
+                    <p style="font-weight: bold;">Enter Admin Password:</p>
+                    <input type="password" name="admin_password" placeholder="Admin Password" required>
+                    <div class="confirm-buttons">
+                        <button type="submit" name="clear_confirm" style="background: #e74c3c;"><i class="fas fa-check"></i> Confirm</button>
+                        <button type="submit" name="clear_no" style="background: #2ecc71;"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                {% else %}
+                    <p style="font-weight: bold;">Are you sure you want to clear all history?</p>
+                    <div class="confirm-buttons">
+                        <button type="submit" name="clear_yes" style="background: #e74c3c;"><i class="fas fa-check"></i> Yes</button>
+                        <button type="submit" name="clear_no" style="background: #2ecc71;"><i class="fas fa-times"></i> No</button>
+                    </div>
+                {% endif %}
+            {% else %}
+                <button type="submit" name="clear_request" style="background-color: #555;"><i class="fas fa-trash"></i> Clear History</button>
+            {% endif %}
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>
